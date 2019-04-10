@@ -4813,7 +4813,7 @@ static std::pair<std::unique_ptr<Module>, jl_llvm_functions_t>
     size_t stmtslen = jl_array_dim0(stmts);
 
     if (JL_HOOK_TEST(ctx.params, emit_function)) {
-        JL_HOOK_CALL(ctx.params, emit_function, 3, (jl_value_t*)ctx.linfo,
+        JL_HOOK_CALL(ctx.params, emit_function, 2, (jl_value_t*)ctx.linfo,
                      (jl_value_t*)ctx.source);
     }
 
@@ -6160,7 +6160,7 @@ static std::pair<std::unique_ptr<Module>, jl_llvm_functions_t>
     }
 
     if (JL_HOOK_TEST(ctx.params, emitted_function)) {
-        JL_HOOK_CALL(ctx.params, emitted_function, 3, (jl_value_t*)ctx.linfo,
+        JL_HOOK_CALL(ctx.params, emitted_function, 2, (jl_value_t*)ctx.linfo,
                      (jl_value_t*)ctx.source);
     }
 
