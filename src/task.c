@@ -323,7 +323,12 @@ static void ctx_switch(jl_ptls_t ptls, jl_task_t **pt)
             jl_swap_fiber(lastt_ctx, &t->ctx);
     }
     else {
+#ifdef ALWAYS_COPY_STACKS
+        jl_longjmp(ptls->base_ctx.uc_mcontext, 1);
+        (void)jl_start_fiber;
+#else
         jl_start_fiber(lastt_ctx, &t->ctx);
+#endif
     }
     // TODO: mutex unlock the thread we just switched from
 #ifdef ENABLE_TIMINGS
@@ -922,7 +927,6 @@ void jl_init_root_task(void *stack_lo, void *stack_hi)
     jl_ptls_t ptls = jl_get_ptls_states();
     ptls->current_task = (jl_task_t*)jl_gc_alloc(ptls, sizeof(jl_task_t),
                                                  jl_task_type);
-    ptls->current_task->copy_stack = 0;
     void *stack = stack_lo;
     size_t ssize = (char*)stack_hi - (char*)stack_lo;
 #ifndef _OS_WINDOWS_
@@ -931,8 +935,15 @@ void jl_init_root_task(void *stack_lo, void *stack_hi)
         ssize += ROOT_TASK_STACK_ADJUSTMENT; // sizeof stack is known exactly, but not where we are in that stack
     }
 #endif
+#ifdef ALWAYS_COPY_STACKS
+    ptls->current_task->copy_stack = 1;
+    ptls->current_task->stkbuf = NULL;
+    ptls->current_task->bufsz = 0;
+#else
+    ptls->current_task->copy_stack = 0;
     ptls->current_task->stkbuf = stack;
     ptls->current_task->bufsz = ssize;
+#endif
     ptls->current_task->started = 1;
     ptls->current_task->next = jl_nothing;
     ptls->current_task->queue = jl_nothing;
@@ -955,7 +966,15 @@ void jl_init_root_task(void *stack_lo, void *stack_hi)
 
     ptls->root_task = ptls->current_task;
 
+#ifdef ALWAYS_COPY_STACKS
+    ptls->stackbase = stack_hi;
+    ptls->stacksize = ssize;
+    if (jl_setjmp(ptls->base_ctx.uc_mcontext, 0))
+        start_task();
+    (void)jl_init_basefiber;
+#else
     jl_init_basefiber(JL_STACK_SIZE);
+#endif
 }
 
 JL_DLLEXPORT int jl_is_task_started(jl_task_t *t)
