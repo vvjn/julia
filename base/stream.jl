@@ -555,7 +555,9 @@ function uv_readcb(handle::Ptr{Cvoid}, nread::Cssize_t, buf::Ptr{Cvoid})
         if nread < 0
             if nread == UV_ENOBUFS && nrequested == 0
                 # remind the client that stream.buffer is full
-                notify(stream.readnotify)
+                if !isempty(stream.readnotify)
+                    notify(stream.readnotify)
+                end
             elseif nread == UV_EOF
                 if isa(stream, TTY)
                     stream.status = StatusEOF # libuv called uv_stop_reading already
